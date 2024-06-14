@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dependency Tree</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: black;
+        }
+
+        .node {
+            stroke: #fff;
+            stroke-width: 1.5px;
+        }
+
+        .link {
+            fill: none;
+            stroke: #555;
+            stroke-opacity: 0.4;
+            stroke-width: 1.5px;
+        }
+
+        .node text {
+            font: 14px sans-serif;
+            fill: #333; /* テキスト色を調整 */
+            pointer-events: none;
+        }
+
+        .node circle {
+            fill: #69b3a2;
+        }
+
+        .node text {
+            fill: #333;
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <h2>Dependency Tree</h2>
+    <div>
+        <label for="graphType">Select Graph Type: </label>
+        <select id="graphType">
+            <option value="dependencies.json">Normal Dependencies</option>
+            <option value="inverted_dependencies.json">Inverted Dependencies</option>
+        </select>
+        <button onclick="loadGraph()">Load Graph</button>
+    </div>
+    <svg width="1920" height="1600"></svg>
+    <script>
+        function loadGraph() {
+            const graphType = document.getElementById('graphType').value;
+            d3.json(graphType).then(function(data) {
+                // Transform data into a hierarchical structure
+                const root = d3.hierarchy(transformData(data));
+                const treeLayout = d3.tree().size([1500, 2000]); // Adjusted height
+
+                treeLayout(root);
+
+                // Clear previous graph
+                const svg = d3.select("svg").selectAll("*").remove();
+
+                const g = d3.select("svg")
+                    .attr("width", 1920)
+                    .attr("height", 2000) // Adjusted height
+                    .append("g")
+                    .attr("transform", "translate(40,0)");
+
+                // Add links between nodes
+                g.selectAll(".link")
+                    .data(root.links())
+                    .enter().append("path")
+                    .attr("class", "link")
+                    .attr("d", d3.linkHorizontal()
+                        .x(d => d.y)
+                        .y(d => d.x));
+
+                // Add nodes
+                const node = g.selectAll(".node")
+                    .data(root.descendants())
+                    .enter().append("g")
+                    .attr("class", "node")
+                    .attr("transform", d => `translate(${d.y},${d.x})`);
+
+                node.append("circle")
+                    .attr("class", "node")
+                    .attr("r", 10);
+
+                node.append("text")
+                    .attr("dx", d => d.children ? -12 : 12)
+                    .attr("dy", 3)
+                    .style("text-anchor", d => d.children ? "end" : "start")
+                    .text(d => d.data.name);
+
+                // Zoom and pan
+                const zoom = d3.zoom()
+                    .scaleExtent([0.5, 2])
+                    .on("zoom", (event) => {
+                        g.attr("transform", event.transform);
+                    });
+
+                d3.select("svg")
+                    .call(zoom);
+
+                // Function to transform flat data into hierarchical structure
+                function transformData(data) {
+                    const root = { name: "root", children: [] };
+                    const nodeMap = {};
+
+                    Object.keys(data).forEach((key) => {
+                        if (!nodeMap[key]) {
+                            nodeMap[key] = { name: key, children: [] };
+                        }
+                        data[key].forEach((dep) => {
+                            if (!nodeMap[dep]) {
+                                nodeMap[dep] = { name: dep, children: [] };
+                            }
+                            nodeMap[key].children.push(nodeMap[dep]);
+                        });
+                    });
+
+                    root.children = Object.values(nodeMap);
+                    return root;
+                }
+            });
+        }
+
+        // Load default graph on page load
+        window.onload = loadGraph;
+    </script>
+</body>
+</html>
