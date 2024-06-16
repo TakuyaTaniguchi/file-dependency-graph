@@ -1,9 +1,9 @@
 const fs = require('fs-extra');
 const path = require('path');
-const { glob } = require('glob');
+const fg = require('fast-glob');
 
 // 解析対象のディレクトリを指定してください
-const targetDir = path.resolve(__dirname, '');
+const targetDir = path.resolve(__dirname, '../ruby-on-rails-react/frontend/src');
 
 // ファイルの依存関係を解析する関数
 const analyzeDependencies = async (files) => {
@@ -11,7 +11,7 @@ const analyzeDependencies = async (files) => {
 
     for (const file of files) {
         const content = await fs.readFile(file, 'utf-8');
-        const regex = /import .* from '(.*)';/g;
+        const regex = /import\s+(?:[\w*{}\s,]*\s+from\s+)?['"](.*)['"];?/g;
         let match;
         const imports = [];
 
@@ -47,6 +47,7 @@ const analyzeDependencies = async (files) => {
         }
 
         dependencies[path.relative(targetDir, file)] = imports;
+        console.log(`Dependencies for ${file}: ${JSON.stringify(imports)}`);
     }
 
     return dependencies;
@@ -75,7 +76,7 @@ const main = async () => {
     console.log('hello');
 
     try {
-        const files = await glob(`${targetDir}/**/*.{tsx,ts}`, { nodir: true });
+        const files = await fg(`${targetDir}/**/*.{tsx,ts}`);
         console.log('Files found:', files.length);
         console.log('Analyzing dependencies...', targetDir);
 
