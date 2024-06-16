@@ -1,131 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dependency Graph</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        .node {
-            stroke: #fff;
-            stroke-width: 1.5px;
-        }
+      .node {
+        stroke: #fff;
+        stroke-width: 1.5px;
+      }
 
-        .link {
-            stroke: #999;
-            stroke-opacity: 0.6;
-        }
+      .link {
+        stroke: #999;
+        stroke-opacity: 0.6;
+      }
 
-        .node text {
-            pointer-events: none;
-            font-size: 10px;
-        }
+      .node text {
+        pointer-events: none;
+        font-size: 10px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <h2>Dependency Graph</h2>
     <div>
-        <label for="graphType">Select Graph Type: </label>
-        <select id="graphType">
-            <option value="./dependencies.json">Normal Dependencies</option>
-            <option value="./inverted_dependencies.json">Inverted Dependencies</option>
-        </select>
-        <button onclick="loadGraph()">Load Graph</button>
+      <label for="graphType">Select Graph Type: </label>
+      <select id="graphType">
+        <option value="./dependencies.json">Normal Dependencies</option>
+        <option value="./inverted_dependencies.json">
+          Inverted Dependencies
+        </option>
+      </select>
+      <button onclick="loadGraph()">Load Graph</button>
     </div>
     <svg width="960" height="600"></svg>
     <script>
-        function loadGraph() {
-            const graphType = document.getElementById('graphType').value;
-            d3.json(graphType).then(function(data) {
-                const graph = { nodes: [], links: [] };
-                const nodeMap = {};
+      function loadGraph() {
+        const graphType = document.getElementById("graphType").value;
+        d3.json(graphType).then(function (data) {
+          const graph = { nodes: [], links: [] };
+          const nodeMap = {};
 
-                // Convert data to nodes and links
-                Object.keys(data).forEach((key) => {
-                    if (!nodeMap[key]) {
-                        nodeMap[key] = { id: key };
-                        graph.nodes.push(nodeMap[key]);
-                    }
-                    data[key].forEach((dep) => {
-                        if (!nodeMap[dep]) {
-                            nodeMap[dep] = { id: dep };
-                            graph.nodes.push(nodeMap[dep]);
-                        }
-                        graph.links.push({ source: nodeMap[key], target: nodeMap[dep] });
-                    });
-                });
-
-                // Clear previous graph
-                d3.select("svg").selectAll("*").remove();
-
-                // Setup simulation
-                const svg = d3.select("svg"),
-                      width = +svg.attr("width"),
-                      height = +svg.attr("height");
-
-                const simulation = d3.forceSimulation(graph.nodes)
-                    .force("link", d3.forceLink(graph.links).id(d => d.id).distance(100))
-                    .force("charge", d3.forceManyBody().strength(-300))
-                    .force("center", d3.forceCenter(width / 2, height / 2));
-
-                const link = svg.append("g")
-                    .attr("class", "links")
-                    .selectAll("line")
-                    .data(graph.links)
-                    .enter().append("line")
-                    .attr("class", "link");
-
-                const node = svg.append("g")
-                    .attr("class", "nodes")
-                    .selectAll("g")
-                    .data(graph.nodes)
-                    .enter().append("g");
-
-                node.append("circle")
-                    .attr("class", "node")
-                    .attr("r", 5)
-                    .call(d3.drag()
-                        .on("start", dragstarted)
-                        .on("drag", dragged)
-                        .on("end", dragended));
-
-                node.append("text")
-                    .attr("x", 8)
-                    .attr("y", 3)
-                    .text(d => d.id);
-
-                simulation.on("tick", () => {
-                    link
-                        .attr("x1", d => d.source.x)
-                        .attr("y1", d => d.source.y)
-                        .attr("x2", d => d.target.x)
-                        .attr("y2", d => d.target.y);
-
-                    node
-                        .attr("transform", d => `translate(${d.x},${d.y})`);
-                });
-
-                function dragstarted(event, d) {
-                    if (!event.active) simulation.alphaTarget(0.3).restart();
-                    d.fx = d.x;
-                    d.fy = d.y;
-                }
-
-                function dragged(event, d) {
-                    d.fx = event.x;
-                    d.fy = event.y;
-                }
-
-                function dragended(event, d) {
-                    if (!event.active) simulation.alphaTarget(0);
-                    d.fx = null;
-                    d.fy = null;
-                }
+          // Convert data to nodes and links
+          Object.keys(data).forEach((key) => {
+            if (!nodeMap[key]) {
+              nodeMap[key] = { id: key };
+              graph.nodes.push(nodeMap[key]);
+            }
+            data[key].forEach((dep) => {
+              if (!nodeMap[dep]) {
+                nodeMap[dep] = { id: dep };
+                graph.nodes.push(nodeMap[dep]);
+              }
+              graph.links.push({ source: nodeMap[key], target: nodeMap[dep] });
             });
-        }
+          });
 
-        // Load default graph on page load
-        window.onload = loadGraph;
+          // Clear previous graph
+          d3.select("svg").selectAll("*").remove();
+
+          // Setup simulation
+          const svg = d3.select("svg"),
+            width = +svg.attr("width"),
+            height = +svg.attr("height");
+
+          const simulation = d3
+            .forceSimulation(graph.nodes)
+            .force(
+              "link",
+              d3
+                .forceLink(graph.links)
+                .id((d) => d.id)
+                .distance(100)
+            )
+            .force("charge", d3.forceManyBody().strength(-300))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+          const link = svg
+            .append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(graph.links)
+            .enter()
+            .append("line")
+            .attr("class", "link");
+
+          const node = svg
+            .append("g")
+            .attr("class", "nodes")
+            .selectAll("g")
+            .data(graph.nodes)
+            .enter()
+            .append("g");
+
+          node
+            .append("circle")
+            .attr("class", "node")
+            .attr("r", 5)
+            .call(
+              d3
+                .drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended)
+            );
+
+          node
+            .append("text")
+            .attr("x", 8)
+            .attr("y", 3)
+            .text((d) => d.id);
+
+          simulation.on("tick", () => {
+            link
+              .attr("x1", (d) => d.source.x)
+              .attr("y1", (d) => d.source.y)
+              .attr("x2", (d) => d.target.x)
+              .attr("y2", (d) => d.target.y);
+
+            node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+          });
+
+          function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+          }
+
+          function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+          }
+
+          function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+          }
+        });
+      }
+
+      // Load default graph on page load
+      window.onload = loadGraph;
     </script>
-</body>
+  </body>
 </html>
