@@ -2,8 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dependency Graph</title>
+    <title>JSON Data Visualization</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
       .node {
@@ -16,85 +15,79 @@
         stroke-opacity: 0.6;
       }
 
-      .node text {
+      text {
+        font-family: Arial, sans-serif;
+        font-size: 12px;
         pointer-events: none;
-        font-size: 10px;
       }
     </style>
   </head>
   <body>
-    <h2>Dependency Graph</h2>
-    <div>
-      <label for="graphType">Select Graph Type: </label>
-      <select id="graphType">
-        <option value="./dependencies.json">Normal Dependencies</option>
-        <option value="./inverted_dependencies.json">
-          Inverted Dependencies
-        </option>
-      </select>
-      <button onclick="loadGraph()">Load Graph</button>
-    </div>
-    <svg width="960" height="600"></svg>
     <script>
-      function loadGraph() {
-        const graphType = document.getElementById("graphType").value;
-        d3.json(graphType).then(function (data) {
-          const graph = { nodes: [], links: [] };
-          const nodeMap = {};
+      // サイズ設定
+      const width = window.innerWidth,
+        height = window.innerHeight;
 
-          // Convert data to nodes and links
-          Object.keys(data).forEach((key) => {
-            if (!nodeMap[key]) {
-              nodeMap[key] = { id: key };
-              graph.nodes.push(nodeMap[key]);
-            }
-            data[key].forEach((dep) => {
-              if (!nodeMap[dep]) {
-                nodeMap[dep] = { id: dep };
-                graph.nodes.push(nodeMap[dep]);
-              }
-              graph.links.push({ source: nodeMap[key], target: nodeMap[dep] });
+      // SVG要素の作成とズームの設定
+      const svg = d3
+        .select("body")
+        .append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .call(
+          d3.zoom().on("zoom", ({ transform }) => {
+            svg.attr("transform", transform);
+          })
+        )
+        .append("g");
+
+      // データの読み込み
+      d3.json("dependencies.json")
+        .then((data) => {
+          // データを処理してリンクとノードのリストを作成
+          const links = [];
+          const nodes = {};
+
+          Object.keys(data).forEach((source) => {
+            data[source].forEach((target) => {
+              links.push({ source, target });
+              nodes[source] = { id: source };
+              nodes[target] = { id: target };
             });
           });
 
-          // Clear previous graph
-          d3.select("svg").selectAll("*").remove();
+          const nodeElements = Object.values(nodes);
 
-          // Setup simulation
-          const svg = d3.select("svg"),
-            width = +svg.attr("width"),
-            height = +svg.attr("height");
-
+          // シミュレーションの設定
           const simulation = d3
-            .forceSimulation(graph.nodes)
+            .forceSimulation(nodeElements)
             .force(
               "link",
               d3
-                .forceLink(graph.links)
+                .forceLink(links)
                 .id((d) => d.id)
                 .distance(100)
             )
-            .force("charge", d3.forceManyBody().strength(-300))
+            .force("charge", d3.forceManyBody().strength(-200))
             .force("center", d3.forceCenter(width / 2, height / 2));
 
+          // リンク要素の描画
           const link = svg
             .append("g")
             .attr("class", "links")
             .selectAll("line")
-            .data(graph.links)
+            .data(links)
             .enter()
             .append("line")
             .attr("class", "link");
 
+          // ノード要素の描画
           const node = svg
             .append("g")
             .attr("class", "nodes")
-            .selectAll("g")
-            .data(graph.nodes)
+            .selectAll("circle")
+            .data(nodeElements)
             .enter()
-            .append("g");
-
-          node
             .append("circle")
             .attr("class", "node")
             .attr("r", 5)
@@ -106,10 +99,15 @@
                 .on("end", dragended)
             );
 
-          node
+          // ノードのテキストラベルを描画
+          const labels = svg
+            .append("g")
+            .attr("class", "labels")
+            .selectAll("text")
+            .data(nodeElements)
+            .enter()
             .append("text")
-            .attr("x", 8)
-            .attr("y", 3)
+            .attr("dy", -10)
             .text((d) => d.id);
 
           simulation.on("tick", () => {
@@ -119,7 +117,9 @@
               .attr("x2", (d) => d.target.x)
               .attr("y2", (d) => d.target.y);
 
-            node.attr("transform", (d) => `translate(${d.x},${d.y})`);
+            node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+
+            labels.attr("x", (d) => d.x).attr("y", (d) => d.y);
           });
 
           function dragstarted(event, d) {
@@ -138,11 +138,10 @@
             d.fx = null;
             d.fy = null;
           }
+        })
+        .catch((error) => {
+          console.error("Error loading or parsing data:", error);
         });
-      }
-
-      // Load default graph on page load
-      window.onload = loadGraph;
     </script>
   </body>
 </html>
